@@ -7,5 +7,7 @@ fn main() {
     // the linker's default of 1 MiB: reserve 16 MiB instead.
     if std::env::var("CARGO_CFG_TARGET_ENV").as_deref() == Ok("msvc") {
         println!("cargo:rustc-link-arg-bins=/STACK:16777216");
+        println!("cargo:rustc-link-arg-bins=/EXPORT:D3D12SDKVersion,DATA");
+        println!("cargo:rustc-link-arg-bins=/EXPORT:D3D12SDKPath,DATA");
     }
 }

@@ -9,6 +9,24 @@ mod run;
 mod shader;
 mod translate;
 
+#[cfg(windows)]
+#[repr(transparent)]
+pub struct AgilitySdkPath(*const u8);
+
+#[cfg(windows)]
+// SAFETY: points to a `'static` null-terminated byte string.
+unsafe impl Sync for AgilitySdkPath {}
+
+#[cfg(windows)]
+#[unsafe(no_mangle)]
+#[used]
+pub static D3D12SDKVersion: u32 = 614;
+
+#[cfg(windows)]
+#[unsafe(no_mangle)]
+#[used]
+pub static D3D12SDKPath: AgilitySdkPath = AgilitySdkPath(c".\\D3D12\\".as_ptr().cast());
+
 use std::path::PathBuf;
 
 use anyhow::Result;
