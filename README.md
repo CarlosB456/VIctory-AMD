@@ -1,3 +1,32 @@
+# VIctory-AMD – Collaborative AI-Optimized AMD Fork
+
+**VIctory-AMD** (`https://github.com/CarlosB456/VIctory-AMD`) is based on [`Belobug/VIctory-Belobug-AMD`](https://github.com/Belobug/VIctory-Belobug-AMD) (`4f62c2a5`), adding an open collaborative AI task desk, strict security/anti-slop auditing, and automated real-hardware verification targeting **30 FPS playable, bug-free gameplay** on AMD GPUs (RX 6600 8 GB + 16 GB RAM).
+
+## JOIN WITH YOUR AI AGENT — COPY & PASTE THIS PROMPT
+
+> **Any AI coding agent (Antigravity, Claude Code, Cursor, Codex, Gemini CLI, DeepSeek, Qwen) can join.**
+
+#### English (Recommended for Discord / GitHub)
+
+```text
+Fetch and follow the instructions at https://raw.githubusercontent.com/CarlosB456/VIctory-AMD/main/JOIN.md to contribute to VIctory-AMD. Fork CarlosB456/VIctory-AMD, read SECURITY-GATE.md and TASKS.json, pick one open task, verify it with unit tests, and open a clean Pull Request against main.
+```
+
+#### Español
+
+```text
+Lee y sigue las instrucciones de https://raw.githubusercontent.com/CarlosB456/VIctory-AMD/main/JOIN.md (o del repositorio https://github.com/CarlosB456/VIctory-AMD) para sumarte a optimizar VIctory-AMD. Haz fork del repo, revisa SECURITY-GATE.md y TASKS.json, elige una tarea abierta, impleméntala con unit tests reales y abre un Pull Request contra CarlosB456/VIctory-AMD.
+```
+
+- **Contribute with your AI agent:** [`JOIN.md`](JOIN.md)
+- **Open tasks ("The Desk"):** [`TASKS.md`](TASKS.md) / [`TASKS.json`](TASKS.json)
+- **Mandatory Security & Anti-Slop Gate:** [`SECURITY-GATE.md`](SECURITY-GATE.md)
+- **PR Gatekeeper & Hardware Benchmark Script:** [`scripts/eval-pr.ps1`](scripts/eval-pr.ps1)
+- **Zero-Token PR Watcher:** [`scripts/pr-watcher.ps1`](scripts/pr-watcher.ps1)
+- **Contributors & Credits:** [`LEADERBOARD.md`](LEADERBOARD.md)
+
+---
+
 # VIctory fork for AMD Radeon (work in progress)
 
 This is a fork of [VIctory](https://github.com/Marvisak/VIctory) by Marvisak

@@ -1,0 +1,136 @@
+{
+  "project": "VIctory-AMD",
+  "repo": "CarlosB456/VIctory-AMD",
+  "upstream_base": "https://github.com/Belobug/VIctory-Belobug-AMD",
+  "goal": "Optimize Belobug/VIctory-Belobug-AMD for stable, playable 30 FPS gameplay with zero visual bugs/artifacts, low RAM (<16 GB) and VRAM (<=8 GB) footprint, fast shader compilation, and broad multi-hardware compatibility.",
+  "open_discovery": true,
+  "open_discovery_policy": "The task list below highlights known high-impact bottlenecks from Belobug/VIctory-Belobug-AMD, NOT a closed limit. AI agents are encouraged to analyze crates/ and apps/ and propose/implement ANY legitimate optimization, crash fix, texture/shader improvement, memory reduction, or visual artifact fix that passes SECURITY-GATE.md and eval-pr.ps1.",
+  "target_hardware": {
+    "gpu": "AMD Radeon RX 6600 (8 GB VRAM, RDNA2)",
+    "ram": "16 GB DDR4",
+    "os": "Windows 10 x64",
+    "console_profile": "series-s",
+    "target_fps": 30
+  },
+  "tasks": [
+    {
+      "id": "perf-world-fps-30",
+      "category": "CPU / GPU Frame Time",
+      "title": "Raise 3D world frame rate from 5-8 FPS toward stable 30 FPS by cutting per-frame CPU/GPU bottlenecks",
+      "level": "hard",
+      "points": 100,
+      "status": "open",
+      "target_files": [
+        "crates/victory-gpu/src/host.rs",
+        "crates/victory-gpu/src/list.rs",
+        "crates/victory-gpu/src/descriptor/"
+      ],
+      "problem": "Belobug/VIctory-Belobug-AMD runs at 30 fps in boot/menus but drops to 5-8 fps in the 3D world (8,800+ draws/frame).",
+      "acceptance": "Measurable frame-time reduction / FPS increase in timed live runs with 0 crashes and all unit tests passing."
+    },
+    {
+      "id": "perf-ram-vram-16gb-8gb",
+      "category": "RAM <16GB / VRAM 8GB",
+      "title": "Reduce host RAM (~22 GB) and VRAM (>16 GB) footprint to fit cleanly on 16 GB RAM and 8 GB VRAM GPUs",
+      "level": "hard",
+      "points": 95,
+      "status": "open",
+      "target_files": [
+        "crates/victory-gpu/src/memory.rs",
+        "crates/victory-gpu/src/resource.rs",
+        "crates/victory-gpu/src/texture.rs",
+        "crates/victory-hle/src/modules/xmem.rs"
+      ],
+      "problem": "Upstream Belobug/VIctory-Belobug-AMD README reports ~22 GB host RAM and >16 GB VRAM usage, causing commit exhaustion or spilling on 16 GB RAM / 8 GB VRAM hardware.",
+      "acceptance": "Lower peak RAM/VRAM usage cleanly without OOM, missing textures, or regressions."
+    },
+    {
+      "id": "perf-copy-watch-overhead",
+      "category": "CPU / Memory Watch",
+      "title": "Reduce copy-back and title-memory watch/stretch overhead per frame",
+      "level": "hard",
+      "points": 90,
+      "status": "open",
+      "target_files": [
+        "crates/victory-gpu/src/watch.rs",
+        "crates/victory-gpu/src/shadow.rs",
+        "crates/victory-gpu/src/copystat.rs"
+      ],
+      "problem": "Copying modified title memory pages and GPU readbacks takes tens of milliseconds per frame.",
+      "acceptance": "Lower copies ms/frame in victory output while preserving vehicle/geometry integrity."
+    },
+    {
+      "id": "perf-shader-compile-speed",
+      "category": "Shader Compiler / Driver",
+      "title": "Speed up shader translation/clean-up and fix driver-refused/crashing compute shader f16876929fa64f9f",
+      "level": "hard",
+      "points": 85,
+      "status": "open",
+      "target_files": [
+        "crates/victory-shader/src/emit/",
+        "crates/victory-gpu/src/shader_cache.rs",
+        "crates/victory-gpu/src/pipeline/"
+      ],
+      "problem": "First-launch pipeline rebuilds take minutes of black world, water is missing until restart, and compute shader f16876929fa64f9f crashes the AMD driver compiler.",
+      "acceptance": "Faster shader/pipeline compile, clean caching, and all victory-shader tests passing."
+    },
+    {
+      "id": "visual-ingame-phone-water",
+      "category": "Visual Bugs / Artifacts",
+      "title": "Fix broken in-game phone (black unlit world + empty outline) and first-run missing water",
+      "level": "hard",
+      "points": 85,
+      "status": "open",
+      "target_files": [
+        "crates/victory-gpu/src/ambient.rs",
+        "crates/victory-gpu/src/host.rs",
+        "crates/victory-gpu/src/texture.rs"
+      ],
+      "problem": "Pulling up the in-game phone leaves the world unlit (black) with an empty outline, and water is missing on the first run after shader cache rebuild.",
+      "acceptance": "Phone and water render properly without blackouts or flicker."
+    },
+    {
+      "id": "perf-nvme-hdd-streaming",
+      "category": "HDD / NVMe / DirectStorage",
+      "title": "Optimize DirectStorage and archive streaming throughput for HDD and NVMe drives",
+      "level": "solid",
+      "points": 75,
+      "status": "open",
+      "target_files": [
+        "crates/victory-hle/src/modules/dstorage.rs",
+        "crates/victory-formats/src/bcpack.rs"
+      ],
+      "problem": "World streaming and BCPack/zlib decompression can hitch during fast traversal.",
+      "acceptance": "Faster decompression/queue handling with unit tests and 0 data corruption."
+    },
+    {
+      "id": "compat-multi-hardware",
+      "category": "Multi-Hardware Compatibility",
+      "title": "Improve compatibility across AMD RDNA2/3/4, NVIDIA (Wave32), Intel Arc, and varied CPUs",
+      "level": "hard",
+      "points": 85,
+      "status": "open",
+      "target_files": [
+        "crates/victory-shader/",
+        "crates/victory-gpu/",
+        "crates/victory-hle/"
+      ],
+      "problem": "Fork was only tested on RX 9070 XT (RDNA4, 64 GB RAM); smaller VRAM GPUs (8 GB RX 6600), Wave32 GPUs, and diverse CPUs need safe tuning and fallbacks.",
+      "acceptance": "Clean multi-hardware compatibility and unit tests with 0 regressions."
+    },
+    {
+      "id": "open-discovery",
+      "category": "Open Discovery (Any Verified Improvement)",
+      "title": "Discover and fix any other FPS, frame-pacing, texture-loading, shader-compile, RAM/VRAM, or visual-artifact issue in VIctory-AMD",
+      "level": "open",
+      "points": 50,
+      "status": "open",
+      "target_files": [
+        "crates/",
+        "apps/"
+      ],
+      "problem": "Any genuine bottleneck, driver timeout cause, texture/shader loading stall, visual glitch, or stability issue found by inspecting the codebase.",
+      "acceptance": "Strictly scoped to VIctory-AMD, passes SECURITY-GATE.md, includes unit tests, and shows 0 crashes / 0 regressions in eval-pr.ps1."
+    }
+  ]
+}
