@@ -1185,9 +1185,11 @@ impl HostHeap {
             return None;
         };
         let is_buf = !self.sampler && view.is_buffer();
-        {
+        let remade = {
             let mut made = self.made.lock().unwrap_or_else(|e| e.into_inner());
-            let gone = is_buf
+            let key_mismatch = made[index as usize] != key;
+            let gone = !key_mismatch
+                && is_buf
                 && for_draw
                 && self
                     .kept
@@ -1196,7 +1198,7 @@ impl HostHeap {
                     .get(index as usize)
                     .and_then(Option::as_ref)
                     .is_some_and(crate::shadow::gone);
-            if made[index as usize] != key || gone {
+            if key_mismatch || gone {
                 let later = !for_draw && is_buf;
                 made[index as usize] = if later { 0 } else { key };
                 let kept = if later {
@@ -1211,9 +1213,12 @@ impl HostHeap {
                 // The stride is the title view's, however and whenever the
                 // host view is made.
                 self.set_stride_count(index, view_stride(&view), view_count(&view));
+                true
+            } else {
+                false
             }
-        }
-        if !self.sampler {
+        };
+        if remade && !self.sampler {
             if is_buf {
                 let placed = matches!(&view, View::Placed(false, r, _) if r[0] != 1);
                 self.track_bindless(index, (i, generation), placed);

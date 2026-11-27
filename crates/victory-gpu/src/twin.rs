@@ -236,6 +236,9 @@ pub(crate) fn note(resource: This, words: Option<&[u32; 10]>) {
 /// True if anything was recorded (the list's pipeline, root signatures,
 /// heaps, targets, viewports and scissors then need setting again).
 pub(crate) fn resolve(list: &HostList) -> bool {
+    if WRITTEN.with(|w| w.borrow().is_empty()) {
+        return false;
+    }
     let written = WRITTEN.with(|w| std::mem::take(&mut *w.borrow_mut()));
     let mut recorded = false;
     let mut done: Vec<usize> = Vec::new();

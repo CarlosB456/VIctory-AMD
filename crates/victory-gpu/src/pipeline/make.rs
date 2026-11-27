@@ -108,7 +108,10 @@ pub(crate) fn missing(p: &Pending) -> Option<String> {
 static DONE: (Mutex<()>, Condvar) = (Mutex::new(()), Condvar::new());
 
 /// Waiting allowed per title frame, over all threads.
-const BUDGET: Duration = Duration::from_millis(500);
+const BUDGET: Duration = Duration::from_millis(50);
+
+/// Waiting allowed when a large pipeline backlog is already compiling.
+const BACKLOG_BUDGET: Duration = Duration::from_millis(5);
 
 /// The same for passes over the screen (below the title's 30 s watchdog).
 const SCREEN_BUDGET: Duration = Duration::from_secs(20);
@@ -162,7 +165,8 @@ fn wait(p: &Pending, frame: u64) {
     static FRAME: [AtomicU64; 2] = [const { AtomicU64::new(u64::MAX) }; 2];
     static WAITED_US: [AtomicU64; 2] = [const { AtomicU64::new(0) }; 2];
     let kind = usize::from(p.screen);
-    let budget = [BUDGET, SCREEN_BUDGET][kind];
+    let normal_budget = if waiting() > 32 { BACKLOG_BUDGET } else { BUDGET };
+    let budget = [normal_budget, SCREEN_BUDGET][kind];
     let waited = &WAITED_US[kind];
     if FRAME[kind].swap(frame, Ordering::Relaxed) != frame {
         waited.store(0, Ordering::Relaxed);
@@ -251,7 +255,13 @@ fn queue(p: Arc<Pending>) {
         let workers = if screen {
             2
         } else {
-            std::thread::available_parallelism().map_or(2, |n| (n.get() / 2).clamp(2, 8))
+            std::env::var("VICTORY_PIPELINE_WORKERS")
+                .ok()
+                .and_then(|v| v.parse::<usize>().ok())
+                .map_or_else(
+                    || std::thread::available_parallelism().map_or(2, |n| (n.get() / 4).clamp(2, 4)),
+                    |n| n.clamp(1, 8),
+                )
         };
         for i in 0..workers {
             worker(i + if screen { 50 } else { 0 }, screen);
