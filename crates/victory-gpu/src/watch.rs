@@ -227,6 +227,14 @@ static GUARDS: Mutex<Guards> = Mutex::new(Guards {
     pins: Vec::new(),
 });
 
+/// Whether a span found clean at `clean_at` is still clean: the region moved
+/// (the title wrote, a guard opened, memory was remapped) since, and the clean
+/// answer no longer holds. No entry means no clean answer was ever taken for
+/// the span, so it must be asked again.
+pub(crate) fn is_clean(clean_at: Option<u64>, epoch: u64) -> bool {
+    clean_at.is_some_and(|at| at == epoch)
+}
+
 /// How long blocks stay writable after [`writing`].
 const PIN: std::time::Duration = std::time::Duration::from_secs(2);
 
@@ -908,6 +916,16 @@ mod tests {
         MEM_COMMIT, MEM_RELEASE, MEM_RESERVE, PAGE_READWRITE, VirtualAlloc, VirtualFree,
     };
     const MEM_WRITE_WATCH: u32 = 0x20_0000;
+
+    /// A span found clean at an epoch is clean only while that epoch stands:
+    /// the first while the title has not written, the second once the region
+    /// moved (a write, a guard opening, a remap) and the clean answer went stale.
+    #[test]
+    fn a_clean_span_is_skipped_only_while_its_epoch_stands() {
+        assert!(is_clean(Some(7), 7), "found clean at 7, still at 7");
+        assert!(!is_clean(Some(7), 8), "the region moved since it was clean");
+        assert!(!is_clean(None, 7), "no clean answer was ever taken");
+    }
 
     /// Two views of the same two physical pages, told as the runtime tells
     /// them: the two addresses.

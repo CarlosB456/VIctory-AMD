@@ -720,7 +720,7 @@ impl Shadow {
             let ge = crate::watch::region_epoch(from, to);
             {
                 let spans = self.clean_spans.lock().unwrap_or_else(|e| e.into_inner());
-                if spans.get(&(from, to)) == Some(&ge) {
+                if crate::watch::is_clean(spans.get(&(from, to)).copied(), ge) {
                     #[cfg(feature = "diagnostics")]
                     {
                         use crate::copystat::{C, add};
@@ -732,7 +732,7 @@ impl Shadow {
             }
             if let Some((now, written)) = crate::watch::writes_guarded(from, to) {
                 let copied = self.copy_stale(from, to, now, &written);
-                if crate::watch::region_epoch(from, to) == ge {
+                if crate::watch::is_clean(Some(ge), crate::watch::region_epoch(from, to)) {
                     let mut spans = self.clean_spans.lock().unwrap_or_else(|e| e.into_inner());
                     if spans.len() >= 8192 {
                         spans.clear();
@@ -748,11 +748,31 @@ impl Shadow {
                 return copied;
             }
         } else if mode != NOT_WATCHED {
+            let ge = crate::watch::region_epoch(from, to);
+            {
+                let spans = self.clean_spans.lock().unwrap_or_else(|e| e.into_inner());
+                if crate::watch::is_clean(spans.get(&(from, to)).copied(), ge) {
+                    #[cfg(feature = "diagnostics")]
+                    {
+                        use crate::copystat::{C, add};
+                        add(C::Checked, (to - from) as u64);
+                        add(C::Unchanged, (to - from) as u64);
+                    }
+                    return 0;
+                }
+            }
             // Probe write-watch first; if that fails and guard succeeds, mark
             // this shadow as guarded so subsequent calls skip GetWriteWatch.
             if let Some((now, written)) = crate::watch::writes(from, to, false) {
                 self.watched.store(1, Ordering::Relaxed);
                 let copied = self.copy_stale(from, to, now, &written);
+                if crate::watch::is_clean(Some(ge), crate::watch::region_epoch(from, to)) {
+                    let mut spans = self.clean_spans.lock().unwrap_or_else(|e| e.into_inner());
+                    if spans.len() >= 8192 {
+                        spans.clear();
+                    }
+                    spans.insert((from, to), ge);
+                }
                 #[cfg(feature = "diagnostics")]
                 {
                     use crate::copystat::{C, add};
@@ -761,11 +781,10 @@ impl Shadow {
                 }
                 return copied;
             }
-            let ge = crate::watch::region_epoch(from, to);
             if let Some((now, written)) = crate::watch::writes_guarded(from, to) {
                 self.watched.store(WATCHED_GUARDED, Ordering::Relaxed);
                 let copied = self.copy_stale(from, to, now, &written);
-                if crate::watch::region_epoch(from, to) == ge {
+                if crate::watch::is_clean(Some(ge), crate::watch::region_epoch(from, to)) {
                     let mut spans = self.clean_spans.lock().unwrap_or_else(|e| e.into_inner());
                     if spans.len() >= 8192 {
                         spans.clear();
