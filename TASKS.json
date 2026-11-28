@@ -33,9 +33,12 @@
     "pipeline_load_fps": "121–124 fps / 8 ms/frame (after perf-pipeline-load-cpu fix, commit 66678857)",
     "agility_sdk": "D3D12SDKVersion=614 exported from victory.exe (commit ff8e29e0) — do NOT remove",
     "texpool_classes": "step /8, whole-slot slab heaps (commit b74ca2b6) — do NOT regress",
-    "world_3d_fps": "5–8 fps (8800+ draws/frame) — open improvement target",
+    "world_3d_fps": "~27-30 fps at frame 3658+ in session 2026-11-28 (Xbox Series S profile, AMD RX 6600, 16 GB RAM) — open improvement target",
     "ram_world": "~8.8–9.6 GB priv_mb at 25 s — open reduction target",
-    "vram_world": "unknown exact, likely > 8 GB — open reduction target"
+    "vram_world": "5190/7378 MiB observed at frame 3658+ — fits 8 GB VRAM, open reduction target",
+    "compute_sgpr_spill_fix": "Non-BVH compute shader unspill retry in emit/mod.rs (commit c561bd70) - dispatches for shader 3cea4534bbc15632 no longer dropped",
+    "buffer_view_zero_count_fix": "Silent early return for count=0 in descriptor/host.rs fits_buffer() (commit c561bd70) - eliminates WARN spam",
+    "shadow_refused_eviction_fix": "REFUSED map evicted at >2048 entries in shadow.rs (commit c561bd70) - prevents lock contention at 1200+ streaming heap views"
   },
 
   "tasks": [
@@ -99,7 +102,7 @@
       "points": 85,
       "status": "open",
       "evergreen": true,
-      "description": "First-launch pipeline rebuild takes minutes of black screen. Compute shader f16876929fa64f9f crashes the AMD driver compiler. Shader cache invalidation is too aggressive. Improvements to parallelism, caching, and DXIL translation quality are all welcome.",
+      "description": "First-launch pipeline rebuild takes minutes of black screen. Compute shader f16876929fa64f9f crashes the AMD driver compiler. Shader cache invalidation is too aggressive. Improvements to parallelism, caching, and DXIL translation quality are all welcome. FINDING (2026-11-28, commit c561bd70): Non-BVH compute shaders (e.g. 3cea4534bbc15632) that use the SGPR spill-table pattern were failing track_with() with an address in an SGPR that is no root parameter and getting dropped. Fixed with on-demand unspill retry in emit/mod.rs. The rays() guard was retained so BVH builder shaders are unaffected. Further improvement: extend unspill retry to cover more GFX10 compute patterns, improve DXIL dead-code elimination for translated shaders.",
       "where_to_look": [
         "crates/victory-shader/src/emit/ — DXIL/SPIR-V emitter, dead-code elimination",
         "crates/victory-shader/src/opt/ — optimization passes",
@@ -237,7 +240,7 @@
       "points": 75,
       "status": "open",
       "evergreen": true,
-      "description": "Even at target FPS, irregular frame delivery causes perceived stutter. Improvements to present timing, fence pipelining, pipeline stall elimination, and GPU-CPU synchronization are welcome.",
+      "description": "Even at target FPS, irregular frame delivery causes perceived stutter. Improvements to present timing, fence pipelining, pipeline stall elimination, and GPU-CPU synchronization are welcome. FINDING (2026-11-28, commit c561bd70): GTA VI streaming creates 1200+ refused heap views (64KiB each) that grew the REFUSED map in shadow.rs to 4096+ entries, causing lock contention on every draw submission. Fixed with LRU eviction at >2048 entries. Further improvement: reduce refused view churn by batching small heap views or coalescing adjacent refused ranges.",
       "where_to_look": [
         "crates/victory-gpu/src/frame.rs — present mode, uncapped(), vsync logic",
         "crates/victory-gpu/src/queue.rs — fence wait granularity",
