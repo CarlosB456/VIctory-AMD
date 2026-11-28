@@ -1,165 +1,275 @@
 ﻿{
-    "project":  "VIctory-AMD",
-    "repo":  "CarlosB456/VIctory-AMD",
-    "upstream_base":  "https://github.com/Belobug/VIctory-Belobug-AMD",
-    "goal":  "Optimize Belobug/VIctory-Belobug-AMD for stable, playable 30 FPS gameplay with zero visual bugs/artifacts, low RAM (\u003c16 GB) and VRAM (\u003c=8 GB) footprint, fast shader compilation, and broad multi-hardware compatibility.",
-    "open_discovery":  true,
-    "open_discovery_policy":  "The task list below highlights known high-impact bottlenecks from Belobug/VIctory-Belobug-AMD, NOT a closed limit. AI agents are encouraged to analyze crates/ and apps/ and propose/implement ANY legitimate optimization, crash fix, texture/shader improvement, memory reduction, or visual artifact fix that passes SECURITY-GATE.md and eval-pr.ps1.",
-    "target_hardware":  {
-                            "gpu":  "AMD Radeon RX 6600 (8 GB VRAM, RDNA2)",
-                            "ram":  "16 GB DDR4",
-                            "os":  "Windows 10 x64",
-                            "console_profile":  "series-s",
-                            "target_fps":  30
-                        },
-    "tasks":  [
-                  {
-                      "id":  "perf-agility-sdk",
-                      "category":  "D3D12 / GPU Compatibility",
-                      "title":  "[DONE] Export D3D12 Agility SDK 614 symbols from victory.exe to unlock SM6.6 root signatures on Windows 10",
-                      "level":  "solid",
-                      "points":  75,
-                      "status":  "done",
-                      "done_in_commit":  "ff8e29e0",
-                      "result":  "Eliminated \u0027host root signature refused 0x80070057\u0027 spam. Zero refused root signatures; draws now execute on GPU (drawn=drawn, was drawn=0 on Win10 without Agility SDK).",
-                      "target_files":  [
-                                           "apps/victory/build.rs",
-                                           "apps/victory/src/main.rs"
-                                       ]
-                  },
-                  {
-                      "id":  "perf-pipeline-load-cpu",
-                      "category":  "Shader Compiler / Driver",
-                      "title":  "[DONE] Reduce CPU overhead during initial pipeline compilation phase (first-run / world load)",
-                      "level":  "hard",
-                      "points":  85,
-                      "status":  "done",
-                      "done_in_commit":  "66678857",
-                      "result":  "FPS during loading: 2-3 fps 337-506ms/frame → 121-124 fps 8ms/frame. Worker threads capped n/4 (2-4) vs n/2 (2-8), BACKLOG_BUDGET 5ms when \u003e32 queued, twin::resolve early-exit, mirror() bindless mutex skip when key unchanged.",
-                      "target_files":  [
-                                           "crates/victory-gpu/src/pipeline/make.rs",
-                                           "crates/victory-gpu/src/twin.rs",
-                                           "crates/victory-gpu/src/descriptor/host.rs"
-                                       ]
-                  },
-                  {
-                      "id":  "perf-world-fps-30",
-                      "category":  "CPU / GPU Frame Time",
-                      "title":  "Raise 3D world frame rate from 5-8 FPS toward stable 30 FPS by cutting per-frame CPU/GPU bottlenecks",
-                      "level":  "hard",
-                      "points":  100,
-                      "status":  "open",
-                      "target_files":  [
-                                           "crates/victory-gpu/src/host.rs",
-                                           "crates/victory-gpu/src/list.rs",
-                                           "crates/victory-gpu/src/descriptor/"
-                                       ],
-                      "problem":  "Belobug/VIctory-Belobug-AMD runs at 30 fps in boot/menus but drops to 5-8 fps in the 3D world (8,800+ draws/frame).",
-                      "acceptance":  "Measurable frame-time reduction / FPS increase in timed live runs with 0 crashes and all unit tests passing."
-                  },
-                  {
-                      "id":  "perf-ram-vram-16gb-8gb",
-                      "category":  "RAM \u003c16GB / VRAM 8GB",
-                      "title":  "Reduce host RAM (~22 GB) and VRAM (\u003e16 GB) footprint to fit cleanly on 16 GB RAM and 8 GB VRAM GPUs",
-                      "level":  "hard",
-                      "points":  95,
-                      "status":  "open",
-                      "target_files":  [
-                                           "crates/victory-gpu/src/memory.rs",
-                                           "crates/victory-gpu/src/resource.rs",
-                                           "crates/victory-gpu/src/texture.rs",
-                                           "crates/victory-hle/src/modules/xmem.rs"
-                                       ],
-                      "problem":  "Upstream Belobug/VIctory-Belobug-AMD README reports ~22 GB host RAM and \u003e16 GB VRAM usage, causing commit exhaustion or spilling on 16 GB RAM / 8 GB VRAM hardware.",
-                      "acceptance":  "Lower peak RAM/VRAM usage cleanly without OOM, missing textures, or regressions."
-                  },
-                  {
-                      "id":  "perf-copy-watch-overhead",
-                      "category":  "CPU / Memory Watch",
-                      "title":  "Reduce copy-back and title-memory watch/stretch overhead per frame",
-                      "level":  "hard",
-                      "points":  90,
-                      "status":  "open",
-                      "target_files":  [
-                                           "crates/victory-gpu/src/watch.rs",
-                                           "crates/victory-gpu/src/shadow.rs",
-                                           "crates/victory-gpu/src/copystat.rs"
-                                       ],
-                      "problem":  "Copying modified title memory pages and GPU readbacks takes tens of milliseconds per frame.",
-                      "acceptance":  "Lower copies ms/frame in victory output while preserving vehicle/geometry integrity."
-                  },
-                  {
-                      "id":  "perf-shader-compile-speed",
-                      "category":  "Shader Compiler / Driver",
-                      "title":  "Speed up shader translation/clean-up and fix driver-refused/crashing compute shader f16876929fa64f9f",
-                      "level":  "hard",
-                      "points":  85,
-                      "status":  "open",
-                      "target_files":  [
-                                           "crates/victory-shader/src/emit/",
-                                           "crates/victory-gpu/src/shader_cache.rs",
-                                           "crates/victory-gpu/src/pipeline/"
-                                       ],
-                      "problem":  "First-launch pipeline rebuilds take minutes of black world, water is missing until restart, and compute shader f16876929fa64f9f crashes the AMD driver compiler.",
-                      "acceptance":  "Faster shader/pipeline compile, clean caching, and all victory-shader tests passing."
-                  },
-                  {
-                      "id":  "visual-ingame-phone-water",
-                      "category":  "Visual Bugs / Artifacts",
-                      "title":  "Fix broken in-game phone (black unlit world + empty outline) and first-run missing water",
-                      "level":  "hard",
-                      "points":  85,
-                      "status":  "open",
-                      "target_files":  [
-                                           "crates/victory-gpu/src/ambient.rs",
-                                           "crates/victory-gpu/src/host.rs",
-                                           "crates/victory-gpu/src/texture.rs"
-                                       ],
-                      "problem":  "Pulling up the in-game phone leaves the world unlit (black) with an empty outline, and water is missing on the first run after shader cache rebuild.",
-                      "acceptance":  "Phone and water render properly without blackouts or flicker."
-                  },
-                  {
-                      "id":  "perf-nvme-hdd-streaming",
-                      "category":  "HDD / NVMe / DirectStorage",
-                      "title":  "Optimize DirectStorage and archive streaming throughput for HDD and NVMe drives",
-                      "level":  "solid",
-                      "points":  75,
-                      "status":  "open",
-                      "target_files":  [
-                                           "crates/victory-hle/src/modules/dstorage.rs",
-                                           "crates/victory-formats/src/bcpack.rs"
-                                       ],
-                      "problem":  "World streaming and BCPack/zlib decompression can hitch during fast traversal.",
-                      "acceptance":  "Faster decompression/queue handling with unit tests and 0 data corruption."
-                  },
-                  {
-                      "id":  "compat-multi-hardware",
-                      "category":  "Multi-Hardware Compatibility",
-                      "title":  "Improve compatibility across AMD RDNA2/3/4, NVIDIA (Wave32), Intel Arc, and varied CPUs",
-                      "level":  "hard",
-                      "points":  85,
-                      "status":  "open",
-                      "target_files":  [
-                                           "crates/victory-shader/",
-                                           "crates/victory-gpu/",
-                                           "crates/victory-hle/"
-                                       ],
-                      "problem":  "Fork was only tested on RX 9070 XT (RDNA4, 64 GB RAM); smaller VRAM GPUs (8 GB RX 6600), Wave32 GPUs, and diverse CPUs need safe tuning and fallbacks.",
-                      "acceptance":  "Clean multi-hardware compatibility and unit tests with 0 regressions."
-                  },
-                  {
-                      "id":  "open-discovery",
-                      "category":  "Open Discovery (Any Verified Improvement)",
-                      "title":  "Discover and fix any other FPS, frame-pacing, texture-loading, shader-compile, RAM/VRAM, or visual-artifact issue in VIctory-AMD",
-                      "level":  "open",
-                      "points":  50,
-                      "status":  "open",
-                      "target_files":  [
-                                           "crates/",
-                                           "apps/"
-                                       ],
-                      "problem":  "Any genuine bottleneck, driver timeout cause, texture/shader loading stall, visual glitch, or stability issue found by inspecting the codebase.",
-                      "acceptance":  "Strictly scoped to VIctory-AMD, passes SECURITY-GATE.md, includes unit tests, and shows 0 crashes / 0 regressions in eval-pr.ps1."
-                  }
-              ]
+  "project": "VIctory-AMD",
+  "repo": "CarlosB456/VIctory-AMD",
+  "upstream_base": "https://github.com/Belobug/VIctory-Belobug-AMD",
+
+  "goal": "Make VIctory a stable, playable Xbox Series S/X HLE emulator for GTA VI on the widest possible range of consumer hardware — AMD, NVIDIA, Intel Arc, varied CPUs, 8–64 GB RAM, 6–24 GB VRAM, Windows 10 and 11, HDD and NVMe — with no visual bugs, no crashes, stable frame pacing, and minimal resource usage.",
+
+  "philosophy": {
+    "tasks_are_always_open": true,
+    "rationale": "No task is ever fully closed. Each task is a direction of improvement, not a one-time fix. Different contributors will find different angles — a fix that halves VRAM on an RX 6600 may leave room for another contributor to halve it again on a 4 GB GPU. PRs that improve the same task from a different angle are always welcome as long as they pass eval-pr.ps1 and do not regress existing verified improvements.",
+    "non_contradiction_rule": "Every PR must be tested against the full crates/ unit test suite AND a live timed run. PRs that break a previously passing test, increase frame time on RX 6600, increase RAM/VRAM consumption, or introduce driver crashes on any supported GPU are rejected regardless of their stated intent.",
+    "hardware_neutrality_rule": "No optimization may hardcode a GPU vendor (AMD, NVIDIA, Intel), a specific RDNA/Turing/Xe generation, or a specific wave size. Use runtime detection (DXGI, D3D12 feature level queries, Rust cfg) or conservative safe defaults. Always test on Wave32 (NVIDIA) and Wave64 (AMD) semantics."
+  },
+
+  "supported_hardware_matrix": {
+    "gpus": [
+      { "vendor": "AMD",    "arch": "RDNA2",    "models": "RX 6500 XT–RX 6950 XT",        "vram_gb_min": 4,  "wave_size": 32, "resizable_bar": "optional" },
+      { "vendor": "AMD",    "arch": "RDNA3",    "models": "RX 7600–RX 7900 XTX",           "vram_gb_min": 8,  "wave_size": 32, "resizable_bar": "optional" },
+      { "vendor": "AMD",    "arch": "RDNA4",    "models": "RX 9070–RX 9070 XT",            "vram_gb_min": 16, "wave_size": 32, "resizable_bar": "optional" },
+      { "vendor": "NVIDIA", "arch": "Ampere",   "models": "RTX 3060–RTX 3090 Ti",          "vram_gb_min": 8,  "wave_size": 32, "resizable_bar": "optional" },
+      { "vendor": "NVIDIA", "arch": "Ada",      "models": "RTX 4060–RTX 4090",             "vram_gb_min": 8,  "wave_size": 32, "resizable_bar": "optional" },
+      { "vendor": "Intel",  "arch": "Xe-HPG",   "models": "Arc A380, A750, A770",          "vram_gb_min": 6,  "wave_size": 8,  "resizable_bar": "required" }
+    ],
+    "ram_gb_target": "8–16 GB (must run stable at 16 GB; 8 GB should not crash)",
+    "vram_gb_target": "6–8 GB minimum (must not OOM at 8 GB on RX 6600)",
+    "os": ["Windows 10 22H2+", "Windows 11 23H2+"],
+    "storage": ["HDD 7200 rpm", "NVMe Gen3", "NVMe Gen4"],
+    "console_profile": "series-s"
+  },
+
+  "known_baselines": {
+    "note": "These are observed values on RX 6600 / 16 GB RAM / Windows 10. Use as reference floors — PRs should not regress these.",
+    "pipeline_load_fps": "121–124 fps / 8 ms/frame (after perf-pipeline-load-cpu fix, commit 66678857)",
+    "agility_sdk": "D3D12SDKVersion=614 exported from victory.exe (commit ff8e29e0) — do NOT remove",
+    "texpool_classes": "step /8, whole-slot slab heaps (commit b74ca2b6) — do NOT regress",
+    "world_3d_fps": "5–8 fps (8800+ draws/frame) — open improvement target",
+    "ram_world": "~8.8–9.6 GB priv_mb at 25 s — open reduction target",
+    "vram_world": "unknown exact, likely > 8 GB — open reduction target"
+  },
+
+  "tasks": [
+
+    {
+      "id": "perf-world-fps",
+      "category": "CPU / GPU Frame Time",
+      "title": "Raise 3D world frame rate from 5–8 FPS toward stable 30 FPS",
+      "level": "hard",
+      "points": 100,
+      "status": "open",
+      "evergreen": true,
+      "description": "The game renders 8,800+ draws per frame in the 3D world. Any PR that measurably reduces per-frame CPU or GPU time — without crashing or regressing other tests — is welcome. Multiple non-overlapping PRs are encouraged (e.g. one for host.rs submission batching, another for list.rs sort, another for descriptor patching). Do not submit a single monolithic PR that touches everything.",
+      "where_to_look": [
+        "crates/victory-gpu/src/host.rs — execute_inner, prewarm, finish_submission",
+        "crates/victory-gpu/src/list.rs — draw list sorting, culling, deduplication",
+        "crates/victory-gpu/src/descriptor/host.rs — per-frame bindless descriptor patching",
+        "crates/victory-gpu/src/frame.rs — frame pacing, present, uncapped logic",
+        "crates/victory-gpu/src/queue.rs — submit batching, fence wait",
+        "crates/victory-gpu/src/shadow.rs — copy-back overhead",
+        "crates/victory-gpu/src/watch.rs — watch overhead per frame"
+      ],
+      "acceptance": "Timed live run shows measurable ms/frame reduction on RX 6600. All crates/victory-gpu unit tests pass. Zero crashes. Zero new driver warnings. Does not break Wave32 (NVIDIA) semantics.",
+      "anti_patterns": [
+        "Do NOT hardcode wave size or vendor strings",
+        "Do NOT disable safety fences or barriers — race conditions are worse than slowdowns",
+        "Do NOT merge draw calls that have different root signatures or pipeline states without validating correctness"
+      ]
+    },
+
+    {
+      "id": "perf-ram-vram",
+      "category": "RAM / VRAM Footprint",
+      "title": "Reduce host RAM and VRAM usage to run on 16 GB RAM and 8 GB VRAM GPUs",
+      "level": "hard",
+      "points": 95,
+      "status": "open",
+      "evergreen": true,
+      "description": "Current observed: ~8.8–9.6 GB priv_mb at 25 s, climbing. VRAM target: fit cleanly in 8 GB (RX 6600). Multiple non-overlapping improvements are welcome: texture eviction, compressed heap reuse, resident set trimming, streaming LOD, etc. Each PR must scope its changes tightly and not conflict with the texpool baseline (commit b74ca2b6).",
+      "where_to_look": [
+        "crates/victory-gpu/src/texpool.rs — texture slot pool (baseline: b74ca2b6, finer classes + whole-slot slabs)",
+        "crates/victory-gpu/src/resource.rs — GPU resource lifetime and eviction",
+        "crates/victory-gpu/src/memory.rs — heap allocation and committed memory tracking",
+        "crates/victory-gpu/src/texture.rs — texture upload, mip streaming",
+        "crates/victory-hle/src/modules/xmem.rs — XMemAlloc large-page host allocator",
+        "crates/victory-hle/src/modules/files.rs — RPF streaming buffer sizing"
+      ],
+      "acceptance": "Measurable reduction in priv_mb or VRAM committed in a live timed run. 6/6 texpool unit tests still pass (a_class_*, a_slab_*). Zero OOM crashes. Zero visual regressions (no missing textures, no corruption).",
+      "anti_patterns": [
+        "Do NOT reduce pool sizes so aggressively that textures are constantly evicted — measure eviction rate",
+        "Do NOT change texpool class() step back to /4 (regression of b74ca2b6)",
+        "Do NOT touch xmem without verifying BCPack decompression still works"
+      ]
+    },
+
+    {
+      "id": "perf-shader-compile",
+      "category": "Shader Compiler / Driver",
+      "title": "Speed up shader translation and pipeline compilation; fix driver-crashed compute shader",
+      "level": "hard",
+      "points": 85,
+      "status": "open",
+      "evergreen": true,
+      "description": "First-launch pipeline rebuild takes minutes of black screen. Compute shader f16876929fa64f9f crashes the AMD driver compiler. Shader cache invalidation is too aggressive. Improvements to parallelism, caching, and DXIL translation quality are all welcome.",
+      "where_to_look": [
+        "crates/victory-shader/src/emit/ — DXIL/SPIR-V emitter, dead-code elimination",
+        "crates/victory-shader/src/opt/ — optimization passes",
+        "crates/victory-gpu/src/shader_cache.rs — disk cache keying and invalidation",
+        "crates/victory-gpu/src/pipeline/ — pipeline object creation, worker scheduling",
+        "crates/victory-gpu/src/pipeline/make.rs — BACKLOG_BUDGET, worker count (baseline: n/4, 5ms backlog budget)"
+      ],
+      "acceptance": "Faster measured pipeline build time. All victory-shader unit tests pass. No AMD/NVIDIA/Intel driver crashes. Does not remove or regress the pipeline worker budget fix (commit 66678857).",
+      "anti_patterns": [
+        "Do NOT increase worker count above n/4 without profiling — was proven to hurt load FPS",
+        "Do NOT add vendor-specific DXIL paths without a runtime branch guarded by DXGI vendor ID"
+      ]
+    },
+
+    {
+      "id": "compat-multi-gpu",
+      "category": "Multi-GPU Compatibility",
+      "title": "Ensure clean execution on AMD RDNA2/3/4, NVIDIA Ampere/Ada, and Intel Arc without vendor-specific hacks",
+      "level": "hard",
+      "points": 90,
+      "status": "open",
+      "evergreen": true,
+      "description": "The emulator was developed primarily on AMD hardware. NVIDIA uses Wave32 and has stricter DXIL validation. Intel Arc requires Resizable BAR and has different heap behavior. Any fix that improves compatibility without breaking AMD is valuable. PRs may be GPU-family scoped (e.g. 'fix Wave32 compute dispatch') as long as they do not regress AMD.",
+      "where_to_look": [
+        "crates/victory-shader/ — wave size assumptions, SM6.6 intrinsic usage",
+        "crates/victory-gpu/src/device.rs — DXGI adapter queries, feature level detection",
+        "crates/victory-gpu/src/memory.rs — heap type selection (UPLOAD vs DEFAULT vs CUSTOM)",
+        "crates/victory-gpu/src/pipeline/ — root signature flags, SM version cap",
+        "crates/victory-hle/src/modules/kernel.rs — host DLL policy (amd_fidelityfx_upscaler_xbox.dll refused)"
+      ],
+      "acceptance": "No regression on AMD RX 6600 (all existing unit tests pass, frame time not worse). Documented test evidence on at least one additional GPU family (NVIDIA or Intel). Zero vendor strings hardcoded in Rust source.",
+      "anti_patterns": [
+        "Do NOT hardcode 'AMD', 'NVIDIA', 'Intel' as string literals in GPU path selection — use DXGI vendor IDs (0x1002, 0x10DE, 0x8086)",
+        "Do NOT assume Wave64 — always use WaveGetLaneCount() dynamically or cap to Wave32",
+        "Do NOT require Resizable BAR unconditionally — keep gpu_upload=false fallback"
+      ]
+    },
+
+    {
+      "id": "compat-low-end-hardware",
+      "category": "Low-End Hardware / Budget GPUs",
+      "title": "Support stable gameplay on low-end hardware: 4–6 GB VRAM, 8 GB RAM, HDD, 4-core CPU",
+      "level": "hard",
+      "points": 90,
+      "status": "open",
+      "evergreen": true,
+      "description": "Target the floor of supported hardware: RX 6500 XT (4 GB VRAM), 8 GB RAM, HDD, 4-core/8-thread CPU. This means aggressive LOD, texture streaming, pipeline cache reuse, and worker thread caps. Must not degrade quality or FPS on higher-end hardware.",
+      "where_to_look": [
+        "crates/victory-gpu/src/texpool.rs — slot eviction policy for VRAM pressure",
+        "crates/victory-gpu/src/resource.rs — resident set management",
+        "crates/victory-hle/src/modules/dstorage.rs — staging buffer size (currently 32 MB), worker count (currently 16)",
+        "crates/victory-gpu/src/pipeline/make.rs — worker thread cap under low core count",
+        "crates/victory-formats/src/bcpack.rs — decompression throughput on HDD"
+      ],
+      "acceptance": "No OOM crash at 4 GB VRAM or 8 GB RAM (graceful degradation). No regression on RX 6600 / 16 GB baseline. HDD streaming must not cause corrupt textures or world pop-in gaps > 500ms.",
+      "anti_patterns": [
+        "Do NOT reduce default staging buffer below 16 MB — will corrupt streaming on fast traversal",
+        "Do NOT evict pipeline cache entries — recompile cost is too high",
+        "Do NOT add quality reduction without a runtime VRAM-pressure gate"
+      ]
+    },
+
+    {
+      "id": "visual-artifacts",
+      "category": "Visual Bugs / Rendering Correctness",
+      "title": "Fix any visual artifact: broken phone, missing water, lighting errors, texture corruption, shadow artifacts",
+      "level": "hard",
+      "points": 85,
+      "status": "open",
+      "evergreen": true,
+      "description": "Known issues: (1) opening the in-game phone leaves world unlit (black) with empty outline only; (2) water is missing on first run after shader cache rebuild until restart; (3) any other rendering artifact discovered. PRs fixing different artifacts are independent and do not conflict.",
+      "where_to_look": [
+        "crates/victory-gpu/src/ambient.rs — ambient/global lighting state",
+        "crates/victory-gpu/src/host.rs — render target transitions, UAV barriers",
+        "crates/victory-gpu/src/texture.rs — texture residency and promotion",
+        "crates/victory-gpu/src/list.rs — render pass ordering",
+        "crates/victory-shader/src/emit/ — incorrect DXIL translation producing wrong output",
+        "crates/victory-hle/src/modules/dstorage.rs — first-run file ordering (water.rpf, shaders.rpf)"
+      ],
+      "acceptance": "Visual artifact no longer reproducible in a live session. Must not introduce new artifacts. All unit tests pass.",
+      "anti_patterns": [
+        "Do NOT mask lighting bugs by boosting ambient — fix the state machine",
+        "Do NOT clear textures to magenta as a placeholder — fix the actual residency issue"
+      ]
+    },
+
+    {
+      "id": "perf-storage-streaming",
+      "category": "HDD / NVMe / DirectStorage",
+      "title": "Optimize DirectStorage queue, BCPack decompression, and RPF streaming for HDD and NVMe",
+      "level": "solid",
+      "points": 75,
+      "status": "open",
+      "evergreen": true,
+      "description": "World streaming and BCPack/zlib decompression hitch during fast traversal. Improvements to queue depth, decompression parallelism, read-ahead, and staging buffer management are welcome. PRs may target HDD or NVMe separately.",
+      "where_to_look": [
+        "crates/victory-hle/src/modules/dstorage.rs — queue depth, staging buffer (currently 32 MB / 16 workers)",
+        "crates/victory-formats/src/bcpack.rs — BCPack block decompression, SIMD opportunities",
+        "crates/victory-formats/src/rpf.rs — RPF archive reader, seek patterns"
+      ],
+      "acceptance": "Faster measured decompression throughput (MB/s) or reduced hitch duration in a timed streaming test. Zero data corruption (hash-verify decompressed output). All victory-formats unit tests pass.",
+      "anti_patterns": [
+        "Do NOT increase staging buffer above 128 MB without measuring RAM impact",
+        "Do NOT use unsafe SIMD without feature-gating on cpufeatures crate"
+      ]
+    },
+
+    {
+      "id": "stability-crashes",
+      "category": "Stability / Crash Prevention",
+      "title": "Find and fix any crash, panic, deadlock, or device-removed error during normal gameplay",
+      "level": "hard",
+      "points": 90,
+      "status": "open",
+      "evergreen": true,
+      "description": "Any crash, Rust panic, D3D12 device removal, or deadlock found during gameplay is a valid target. Crashes may be intermittent — provide a reproduction step or log excerpt. PRs that add defensive checks, fix race conditions, or handle edge cases are always welcome.",
+      "where_to_look": [
+        "crates/victory-gpu/src/ — fence waits, barrier transitions, descriptor heap overflow",
+        "crates/victory-hle/src/modules/ — HLE function panics on unexpected arguments",
+        "crates/victory-loader/src/ — image mapping, TLS redirect edge cases",
+        "apps/victory/src/main.rs — top-level panic handler"
+      ],
+      "acceptance": "Crash no longer reproducible. If intermittent, add a regression test or log assertion. All existing tests pass.",
+      "anti_patterns": [
+        "Do NOT use unwrap() in hot paths — propagate errors",
+        "Do NOT silence a panic with catch_unwind without logging the error"
+      ]
+    },
+
+    {
+      "id": "perf-frame-pacing",
+      "category": "Frame Pacing / Latency",
+      "title": "Improve frame pacing: eliminate frame time spikes, hitches, and micro-stutters",
+      "level": "solid",
+      "points": 75,
+      "status": "open",
+      "evergreen": true,
+      "description": "Even at target FPS, irregular frame delivery causes perceived stutter. Improvements to present timing, fence pipelining, pipeline stall elimination, and GPU-CPU synchronization are welcome.",
+      "where_to_look": [
+        "crates/victory-gpu/src/frame.rs — present mode, uncapped(), vsync logic",
+        "crates/victory-gpu/src/queue.rs — fence wait granularity",
+        "crates/victory-gpu/src/host.rs — CPU-GPU sync points, prewarm",
+        "crates/victory-gpu/src/pipeline/make.rs — just-in-time stalls when pipeline not ready"
+      ],
+      "acceptance": "Measured reduction in frame time variance (99th percentile ms/frame) in a timed run. No regression to median FPS. All tests pass.",
+      "anti_patterns": [
+        "Do NOT remove GPU-CPU synchronization fences — correctness first",
+        "Do NOT set present interval to 0 unconditionally — respect user's uncapped setting"
+      ]
+    },
+
+    {
+      "id": "open-discovery",
+      "category": "Open Discovery — Any Verified Improvement",
+      "title": "Find and fix any bottleneck, bug, or incompatibility not covered by the tasks above",
+      "level": "open",
+      "points": 50,
+      "status": "open",
+      "evergreen": true,
+      "description": "If you find a performance win, bug, or compatibility issue that does not fit the tasks above, open a PR. Discoveries from any area of crates/ or apps/ are valid — shader bugs, allocator inefficiencies, HLE correctness issues, input handling, audio glitches, etc. Describe the problem, the fix, and how you verified it.",
+      "where_to_look": [
+        "crates/ — all crates are in scope",
+        "apps/ — victory loader and main binary"
+      ],
+      "acceptance": "Strictly scoped to VIctory-AMD functionality. Passes SECURITY-GATE.md scan. Includes at least one unit test or measured benchmark showing improvement. Zero regressions.",
+      "anti_patterns": [
+        "Do NOT submit refactors with no measurable improvement",
+        "Do NOT submit changes to scripts/, .github/, or build infrastructure without prior discussion"
+      ]
+    }
+
+  ]
 }
