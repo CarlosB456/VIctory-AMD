@@ -337,14 +337,27 @@ pub fn translate_for(container: &[u8], target: Target) -> Result<HostShader, Sha
     let traces = resource::traces_rays(&p);
     let io = io::raise(&p, &native)?;
     let st = structure::structure(&p)?;
-    let with = |addresses: bool| {
-        let res = resource::track_with(&p, &native.layout, native.stage, addresses)?;
-        emit(&c, &native, &p, &st, &io, &res, target)
+    let is_cs = native.stage == HwStage::Cs;
+    let with = |p: &ir::Program, st: &structure::Structured, io: &io::Io, addresses: bool| {
+        let res = resource::track_with(p, &native.layout, native.stage, addresses)?;
+        emit(&c, &native, p, st, io, &res, target)
     };
-    let compute = native.stage == HwStage::Cs && rays();
-    let plain = match with(traces && compute) {
-        Err(ShaderError::Unsupported { .. }) if compute && !traces => with(true),
-        Err(ShaderError::Unsupported { .. }) if compute => with(false),
+    let compute = is_cs && rays();
+    let plain = match with(&p, &st, &io, traces && compute) {
+        // Non-BVH compute shader: spilled user-data SGPRs that resource
+        // tracking cannot trace to a root parameter. Try unspill + retry once.
+        Err(ShaderError::Unsupported { ref what, .. })
+            if is_cs && !rays() && *what == "an address in an SGPR that is no root parameter" =>
+        {
+            let mut p2 = p.clone();
+            crate::unspill::unspill(&mut p2, &native.layout, native.stage);
+            crate::sgpr_spill::forward(&mut p2);
+            let st2 = structure::structure(&p2)?;
+            let io2 = io::raise(&p2, &native)?;
+            with(&p2, &st2, &io2, traces)
+        }
+        Err(ShaderError::Unsupported { .. }) if compute && !traces => with(&p, &st, &io, true),
+        Err(ShaderError::Unsupported { .. }) if compute => with(&p, &st, &io, false),
         done => return done,
     };
     plain

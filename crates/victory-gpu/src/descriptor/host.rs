@@ -2488,7 +2488,10 @@ fn fits_buffer(shadow: &crate::shadow::Shadow, first: u64, count: u32, size: u64
     let end = first
         .checked_add(u64::from(count))
         .and_then(|n| n.checked_mul(size.max(1)));
-    let fits = count > 0 && size > 0 && end.is_some_and(|e| e <= width);
+    if count == 0 {
+        return false;
+    }
+    let fits = size > 0 && end.is_some_and(|e| e <= width);
     if !fits {
         once!(first, count, size, width, "a buffer view the host does not allow");
     }

@@ -1138,6 +1138,10 @@ fn direct(address: u64, end: u64) -> Option<Arc<Shadow>> {
     static REFUSED: Mutex<BTreeMap<u64, (u64, u64)>> = Mutex::new(BTreeMap::new());
     let frame = crate::queue::presented();
     let mut refused = REFUSED.lock().unwrap_or_else(|e| e.into_inner());
+    // Evict stale entries to bound the map size and keep lock contention low.
+    if refused.len() > 2048 {
+        refused.retain(|_, &mut (_, f)| f + 30 > frame);
+    }
     if let Some(&(e, f)) = refused.get(&address)
         && e == end
         && f + 30 > frame
@@ -1220,7 +1224,7 @@ pub(crate) fn died() -> u64 {
 }
 
 /// Stretches shorter than this are copied: each window is a host heap.
-const STRETCH_LEAST: usize = 4 << 20;
+const STRETCH_LEAST: usize = 64 << 10;
 
 /// A window on title memory the title shows page by page: Grand Theft Auto
 /// VI maps its streaming heaps one 64 KiB view at a time, every view its
