@@ -151,12 +151,25 @@ fn start(p: &Arc<Pending>) {
     }
 }
 
+/// Maximum number of early-start pipelines queued simultaneously.
+/// Caps the boot-time CPU/memory storm when 1 000+ pipelines are
+/// enqueued all at once alongside dstorage opening dozens of files.
+/// Workers: typically 2–4; at 32 queued they switch to BACKLOG_BUDGET.
+/// We allow up to 16 so the workers always have work, but do not
+/// saturate every core and exhaust RAM at the same instant.
+const EARLY_QUEUE_CAP: u64 = 16;
+
 /// At the title's creation of a pipeline: starts it at once if an earlier
-/// run drew with it (during loading, so the world's first frames find it).
+/// run drew with it (during loading, so the world's first frames find it),
+/// unless the early queue is already full (boot-storm guard).
 pub(crate) fn early(p: &Arc<Pending>) {
     if !p.shaders.is_empty() && super::library::wanted_early(&p.key) {
-        super::library::EARLY.fetch_add(1, Ordering::Relaxed);
-        start(p);
+        if WAITING.load(Ordering::Relaxed) < EARLY_QUEUE_CAP {
+            super::library::EARLY.fetch_add(1, Ordering::Relaxed);
+            start(p);
+        }
+        // If the cap is reached the pipeline is not started early this run;
+        // the title's first draw with it will queue it normally (ready()).
     }
 }
 
